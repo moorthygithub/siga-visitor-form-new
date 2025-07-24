@@ -50,6 +50,7 @@
     "react-datepicker": "^8.4.0",
     "react-day-picker": "^9.7.0",
     "react-dom": "^18.3.1",
+    "react-easy-crop": "^5.5.0",
     "react-hook-form": "^7.53.2",
     "react-icons": "^5.3.0",
     "react-router-dom": "^6.27.0",
@@ -63,6 +64,7 @@
   "devDependencies": {
     "@types/react": "^18.3.10",
     "@types/react-dom": "^18.3.0",
+    "@types/react-easy-crop": "^1.16.0",
     "@vitejs/plugin-react": "^4.3.2",
     "autoprefixer": "^10.4.20",
     "globals": "^15.9.0",
