@@ -1,20 +1,14 @@
-import React, { useState, useEffect } from "react";
+import ImageCropUpload from "@/components/ImageCropUpload";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import BASE_URL from "@/config/BaseUrl";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  PlusCircle,
-  MinusCircle,
-  CheckCircle,
-  Upload,
-  ImageUp,
-} from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import BASE_URL from "@/config/BaseUrl";
 import axios from "axios";
 import { ChevronsUpDown } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import ReactSelect from "react-select";
 const DropdownIndicator = () => (
   <div className="p-2 flex items-center ">
@@ -66,7 +60,6 @@ const Register = () => {
   const navigate = useNavigate();
   const [stars, setStars] = useState([]);
   const [participants, setParticipants] = useState({
-    fair_person_name: "",
     register_firm_name: "",
     fair_gst_number: "",
     register_email: "",
@@ -78,10 +71,11 @@ const Register = () => {
     fair_profession: "",
     fair_note: "",
     fair_no_of_people: "",
+
+    sub_data: [],
   });
-  console.log(participants.register_categygroup);
+  console.log(participants.sub_data, "sub_data");
   const [errors, setErrors] = useState({
-    fair_person_name: "",
     register_firm_name: "",
     fair_gst_number: "",
     register_email: "",
@@ -182,7 +176,6 @@ const Register = () => {
   const validateForm = () => {
     let isValid = true;
     const newErrors = {
-      fair_person_name: "",
       register_firm_name: "",
       fair_gst_number: "",
       register_email: "",
@@ -194,21 +187,23 @@ const Register = () => {
       fair_profession: "",
       fair_note: "",
       fair_no_of_people: "",
+      sub_data: [],
     };
 
-    if (!participants.fair_person_name.trim()) {
-      newErrors.fair_person_name = "Person Name is required";
+
+
+    if (!participants.fair_gst_number.trim()) {
+      newErrors.fair_gst_number = "GST is required";
+      isValid = false;
+    } else if (participants.fair_gst_number.trim().length < 4) {
+      newErrors.fair_gst_number = "GST is required";
       isValid = false;
     }
-
     if (!participants.register_phone.trim()) {
       newErrors.register_phone = "Mobile Number is required";
       isValid = false;
     }
-    // if (!participants.register_categygroup.trim()) {
-    //   newErrors.register_categygroup = "Please select  Type";
-    //   isValid = false;
-    // }
+   
 
     if (selectedTypes.length == 0) {
       newErrors.register_categygroup = "Please select Type";
@@ -252,15 +247,77 @@ const Register = () => {
       newErrors.register_phone = "Mobile Number must 10 digits";
       isValid = false;
     }
+    if (participants.sub_data?.length > 0) {
+      const peopleErrors = [];
 
+      participants.sub_data.forEach((person, index) => {
+        const error = { fair_person_name: "", fair_person_image: "" };
+
+        if (!person.fair_person_name.trim()) {
+          error.fair_person_name = `Name required at row ${index + 1}`;
+          isValid = false;
+        }
+
+        if (!person.fair_person_image) {
+          error.fair_person_image = `Photo required at row ${index + 1}`;
+          isValid = false;
+        }
+
+        peopleErrors.push(error);
+      });
+
+      newErrors.sub_data = peopleErrors;
+    }
     setErrors(newErrors);
     return isValid;
   };
 
+  // const handleInputChange = (e) => {
+  //   const { name, value } = e.target;
+  //   if (["register_phone", "fair_no_of_people"].includes(name)) {
+  //     if (!/^\d*$/.test(value)) return;
+  //   }
+
+  //   setParticipants((prev) => ({
+  //     ...prev,
+  //     [name]: value,
+  //   }));
+
+  //   if (errors[name]) {
+  //     setErrors((prev) => ({
+  //       ...prev,
+  //       [name]: "",
+  //     }));
+  //   }
+  // };
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+
+    // Allow only numbers for specific fields
     if (["register_phone", "fair_no_of_people"].includes(name)) {
       if (!/^\d*$/.test(value)) return;
+    }
+
+    // Prevent leading 0 or zero value
+    if (name === "fair_no_of_people") {
+      if (value === "0") return;
+
+      const count = parseInt(value || 0);
+      const peopleArray = Array.from({ length: count }, (_, index) => {
+        return (
+          participants.sub_data?.[index] || {
+            fair_person_name: "",
+            fair_person_image: null,
+          }
+        );
+      });
+
+      setParticipants((prev) => ({
+        ...prev,
+        fair_no_of_people: value,
+        sub_data: peopleArray,
+      }));
+      return;
     }
 
     setParticipants((prev) => ({
@@ -274,6 +331,19 @@ const Register = () => {
         [name]: "",
       }));
     }
+  };
+
+  const handlePersonChange = (index, field, value) => {
+    const updated = [...participants.sub_data];
+    updated[index] = {
+      ...updated[index],
+      [field]: value,
+    };
+
+    setParticipants((prev) => ({
+      ...prev,
+      sub_data: updated,
+    }));
   };
 
   const onSubmit = async (e) => {
@@ -345,63 +415,60 @@ const Register = () => {
                 SIGA FAIR Registration
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                
                 <div>
                   <label className="block text-sm font-medium mb-2 text-amber-800">
-                    Person Name <span className="text-red-600">*</span>
+                    Company Name<span className="text-red-600">*</span>
                   </label>
                   <Input
-                    type="text"
-                    placeholder="Enter Person name"
-                    name="fair_person_name"
-                    value={participants.fair_person_name}
+                    placeholder="Enter Company Name"
+                    name="register_firm_name"
+                    value={participants.register_firm_name}
                     onChange={handleInputChange}
                     className="bg-white border-amber-300 focus:ring-amber-200 focus:border-amber-400"
                   />
-                  {errors.fair_person_name && (
+                  {errors.register_firm_name && (
                     <p className="mt-1 text-sm text-red-600">
-                      {errors.fair_person_name}
+                      {errors.register_firm_name}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-amber-800">
+                    GST Number<span className="text-red-600">*</span>
+                  </label>
+                  <Input
+                    placeholder="Enter GST Number"
+                    name="fair_gst_number"
+                    value={participants.fair_gst_number}
+                    onChange={handleInputChange}
+                    maxLength={14}
+                    className="bg-white border-amber-300 focus:ring-amber-200 focus:border-amber-400"
+                  />
+                  {errors.fair_gst_number && (
+                    <p className="mt-1 text-sm text-red-600">
+                      {errors.fair_gst_number}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-amber-800">
+                    Places<span className="text-red-600">*</span>
+                  </label>
+                  <Input
+                    placeholder="Enter Places"
+                    name="register_address"
+                    value={participants.register_address}
+                    onChange={handleInputChange}
+                    className="bg-white border-amber-300 focus:ring-amber-200 focus:border-amber-400"
+                  />
+                  {errors.register_address && (
+                    <p className="mt-1 text-sm text-red-600">
+                      {errors.register_address}
                     </p>
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-2 text-amber-800">
-                    Mobile No <span className="text-red-600">*</span>
-                  </label>
-                  <Input
-                    type="text"
-                    placeholder="Enter Mobile No"
-                    name="register_phone"
-                    value={participants.register_phone}
-                    onChange={handleInputChange}
-                    maxLength={10}
-                    className="bg-white border-amber-300 focus:ring-amber-200 focus:border-amber-400"
-                  />
-                  {errors.register_phone && (
-                    <p className="mt-1 text-sm text-red-600">
-                      {errors.register_phone}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2 text-amber-800">
-                    Email Id<span className="text-red-600">*</span>
-                  </label>
-                  <Input
-                    type="email"
-                    placeholder="Enter Email Id"
-                    name="register_email"
-                    value={participants.register_email}
-                    onChange={handleInputChange}
-                    className="bg-white border-amber-300 focus:ring-amber-200 focus:border-amber-400"
-                  />
-                  {errors.register_email && (
-                    <p className="mt-1 text-sm text-red-600">
-                      {errors.register_email}
-                    </p>
-                  )}
-                </div>
                 <div>
                   <label className="block text-sm font-medium mb-2 text-amber-800">
                     Type <span className="text-red-600">*</span>
@@ -483,23 +550,7 @@ const Register = () => {
                     </p>
                   )}
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2 text-amber-800">
-                    Company Name<span className="text-red-600">*</span>
-                  </label>
-                  <Input
-                    placeholder="Enter Company Name"
-                    name="register_firm_name"
-                    value={participants.register_firm_name}
-                    onChange={handleInputChange}
-                    className="bg-white border-amber-300 focus:ring-amber-200 focus:border-amber-400"
-                  />
-                  {errors.register_firm_name && (
-                    <p className="mt-1 text-sm text-red-600">
-                      {errors.register_firm_name}
-                    </p>
-                  )}
-                </div>
+
                 {showCategoryField && (
                   <div>
                     <label className="block text-sm font-medium mb-2 text-amber-800">
@@ -533,36 +584,6 @@ const Register = () => {
                     />
                   </div>
                 )}
-                <div>
-                  <label className="block text-sm font-medium mb-2 text-amber-800">
-                    Places<span className="text-red-600">*</span>
-                  </label>
-                  <Input
-                    placeholder="Enter Places"
-                    name="register_address"
-                    value={participants.register_address}
-                    onChange={handleInputChange}
-                    className="bg-white border-amber-300 focus:ring-amber-200 focus:border-amber-400"
-                  />
-                  {errors.register_address && (
-                    <p className="mt-1 text-sm text-red-600">
-                      {errors.register_address}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2 text-amber-800">
-                    GST Number
-                  </label>
-                  <Input
-                    placeholder="Enter GST Number"
-                    name="fair_gst_number"
-                    value={participants.fair_gst_number}
-                    onChange={handleInputChange}
-                    maxLength={14}
-                    className="bg-white border-amber-300 focus:ring-amber-200 focus:border-amber-400"
-                  />
-                </div>
                 <div>
                   <label className="block text-sm font-medium mb-2 text-amber-800">
                     Category <span className="text-red-600">*</span>
@@ -648,6 +669,45 @@ const Register = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-2 text-amber-800">
+                    Mobile No <span className="text-red-600">*</span>
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="Enter Mobile No"
+                    name="register_phone"
+                    value={participants.register_phone}
+                    onChange={handleInputChange}
+                    maxLength={10}
+                    className="bg-white border-amber-300 focus:ring-amber-200 focus:border-amber-400"
+                  />
+                  {errors.register_phone && (
+                    <p className="mt-1 text-sm text-red-600">
+                      {errors.register_phone}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-amber-800">
+                    Email Id<span className="text-red-600">*</span>
+                  </label>
+                  <Input
+                    type="email"
+                    placeholder="Enter Email Id"
+                    name="register_email"
+                    value={participants.register_email}
+                    onChange={handleInputChange}
+                    className="bg-white border-amber-300 focus:ring-amber-200 focus:border-amber-400"
+                  />
+                  {errors.register_email && (
+                    <p className="mt-1 text-sm text-red-600">
+                      {errors.register_email}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-amber-800">
                     No of People<span className="text-red-600">*</span>
                   </label>
                   <Input
@@ -664,6 +724,85 @@ const Register = () => {
                     </p>
                   )}
                 </div>
+                {participants.sub_data?.length > 0 && (
+                  <div className="col-span-full mt-6">
+                    <h3 className="text-lg font-semibold mb-4 text-amber-700">
+                      People Details
+                    </h3>
+                    <div className="grid gap-4">
+                      {participants.sub_data.map((person, index) => (
+                        <div
+                          key={index}
+                          className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-amber-50 p-4 rounded-lg shadow-sm"
+                        >
+                          {/* Person Name */}
+                          <div>
+                            <label className="block text-sm font-medium text-amber-800 mb-1">
+                              Person Name #{index + 1}
+                            </label>
+                            <Input
+                              placeholder="Enter Person Name"
+                              value={person.fair_person_name}
+                              onChange={(e) =>
+                                handlePersonChange(
+                                  index,
+                                  "fair_person_name",
+                                  e.target.value
+                                )
+                              }
+                              className="bg-white border-amber-300 focus:ring-amber-200 focus:border-amber-400"
+                            />
+                            {errors.sub_data?.[index]?.fair_person_name && (
+                              <p className="text-red-500 text-sm mt-1">
+                                {errors.sub_data[index].fair_person_name}
+                              </p>
+                            )}
+                          </div>
+
+                       
+                          <div>
+                            <label className="block text-sm font-medium text-amber-800 mb-1">
+                              Upload Photo #{index + 1}
+                            </label>
+
+                            <ImageCropUpload
+                              inputId={`fileCropInput-${index}`}
+                              onCropDone={(file) =>
+                                handlePersonChange(
+                                  index,
+                                  "fair_person_image",
+                                  file
+                                )
+                              }
+                         
+                            />
+
+                            {errors.sub_data?.[index]?.fair_person_image && (
+                              <p className="text-red-500 text-sm mt-1">
+                                {errors.sub_data[index].fair_person_image}
+                              </p>
+                            )}
+                          </div>
+                          <div>
+                            {participants.sub_data?.[index]
+                              ?.fair_person_image && (
+                              <div className="mt-2">
+                                <img
+                                  src={URL.createObjectURL(
+                                    participants.sub_data[index]
+                                      .fair_person_image
+                                  )}
+                                  alt={`Person ${index + 1}`}
+                                  className="w-30  h-30 object-cover border border-amber-300 shadow"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
@@ -675,9 +814,7 @@ const Register = () => {
             className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white shadow-md hover:shadow-amber-200/50 transition-all"
             disabled={createIdCardMutation.isPending}
           >
-            {createIdCardMutation.isPending
-              ? "Submitting..."
-              : "Submit"}
+            {createIdCardMutation.isPending ? "Submitting..." : "Submit"}
           </Button>
         </div>
       </form>
