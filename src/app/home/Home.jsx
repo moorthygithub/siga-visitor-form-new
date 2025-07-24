@@ -59,6 +59,8 @@ const Register = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [stars, setStars] = useState([]);
+  const [imageCheck, setImageCheck] = useState(null);
+  console.log(imageCheck, "imageCheck");
   const [participants, setParticipants] = useState({
     register_firm_name: "",
     fair_gst_number: "",
@@ -74,7 +76,6 @@ const Register = () => {
 
     sub_data: [],
   });
-  console.log(participants.sub_data, "sub_data");
   const [errors, setErrors] = useState({
     register_firm_name: "",
     fair_gst_number: "",
@@ -89,15 +90,18 @@ const Register = () => {
     fair_no_of_people: "",
   });
 
-  const representativeTemplate = {
-    idcardsub_rep_name: "",
-    idcardsub_rep_mobile: null,
-    idcardsub_rep_image: null,
-  };
+  useEffect(() => {
+    const fetchImageCheck = async () => {
+      try {
+        const response = await axios.get(`${BASE_URL}/api/fetch-image-check`);
+        setImageCheck(response.data?.data?.imageCheck);
+      } catch (error) {
+        console.error("Error fetching image check:", error);
+      }
+    };
 
-  const [representatives, setRepresentatives] = useState([
-    { ...representativeTemplate },
-  ]);
+    fetchImageCheck();
+  }, [participants]);
 
   useEffect(() => {
     const generateStars = () => {
@@ -125,8 +129,6 @@ const Register = () => {
 
   const createIdCardMutation = useMutation({
     mutationFn: async (formData) => {
-      // console.log("Mutation triggered with formData:");
-
       try {
         const response = await axios.post(
           `${BASE_URL}/api/insert-visitors-register`,
@@ -144,14 +146,23 @@ const Register = () => {
       }
     },
     onSuccess: (data) => {
-      toast({
-        title: "Success",
-        description: data?.msg || "ID Card created successfully",
-        className: "bg-green-100 text-green-800",
-      });
-      navigate("/thankyou", {
-        state: { fairid: data?.fairid },
-      });
+      if (data.code == 200) {
+        toast({
+          title: "Success",
+          description: data?.msg || "ID Card created successfully",
+          className: "bg-green-100 text-green-800",
+        });
+        navigate("/thankyou", {
+          state: { fairid: data?.fairid },
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: data?.msg || "Something went wrong",
+          variant: "destructive",
+          className: "bg-red-100 text-red-800",
+        });
+      }
     },
     onError: (error) => {
       toast({
@@ -190,8 +201,6 @@ const Register = () => {
       sub_data: [],
     };
 
-
-
     if (!participants.fair_gst_number.trim()) {
       newErrors.fair_gst_number = "GST is required";
       isValid = false;
@@ -203,7 +212,6 @@ const Register = () => {
       newErrors.register_phone = "Mobile Number is required";
       isValid = false;
     }
-   
 
     if (selectedTypes.length == 0) {
       newErrors.register_categygroup = "Please select Type";
@@ -258,7 +266,7 @@ const Register = () => {
           isValid = false;
         }
 
-        if (!person.fair_person_image) {
+        if (imageCheck === "Yes" && !person.fair_person_image) {
           error.fair_person_image = `Photo required at row ${index + 1}`;
           isValid = false;
         }
@@ -268,6 +276,7 @@ const Register = () => {
 
       newErrors.sub_data = peopleErrors;
     }
+
     setErrors(newErrors);
     return isValid;
   };
@@ -415,7 +424,6 @@ const Register = () => {
                 SIGA FAIR Registration
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-                
                 <div>
                   <label className="block text-sm font-medium mb-2 text-amber-800">
                     Company Name<span className="text-red-600">*</span>
@@ -759,7 +767,6 @@ const Register = () => {
                             )}
                           </div>
 
-                       
                           <div>
                             <label className="block text-sm font-medium text-amber-800 mb-1">
                               Upload Photo #{index + 1}
@@ -774,7 +781,6 @@ const Register = () => {
                                   file
                                 )
                               }
-                         
                             />
 
                             {errors.sub_data?.[index]?.fair_person_image && (
