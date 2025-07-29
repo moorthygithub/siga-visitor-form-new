@@ -450,7 +450,7 @@ const Register = () => {
                     name="fair_gst_number"
                     value={participants.fair_gst_number}
                     onChange={handleInputChange}
-                    maxLength={14}
+                    // maxLength={14}
                     className="bg-white border-amber-300 focus:ring-amber-200 focus:border-amber-400"
                   />
                   {errors.fair_gst_number && (
